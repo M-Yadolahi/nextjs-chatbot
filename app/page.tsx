@@ -109,6 +109,7 @@ const styles = {
     padding: "10px",
     borderRadius: "5px",
     border: "1px solid #ccc",
+    color:"black",
   },
   button: {
     marginLeft: "10px",
