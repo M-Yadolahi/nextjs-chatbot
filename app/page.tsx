@@ -1,127 +1,143 @@
 "use client";
-import { useState } from "react";
 
-export default function Home() {
-  const [messages, setMessages] = useState<{ from: string; text: string }[]>([]);
+import { useState, useRef, useEffect } from "react";
+
+export default function ChatPage() {
   const [input, setInput] = useState("");
+  const [messages, setMessages] = useState<{ sender: string; text: string }[]>([]);
   const [loading, setLoading] = useState(false);
+
+  const chatBoxRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to bottom whenever messages change
+  useEffect(() => {
+    chatBoxRef.current?.scrollTo({
+      top: chatBoxRef.current.scrollHeight,
+      behavior: "smooth",
+    });
+  }, [messages, loading]);
 
   const sendMessage = async () => {
     if (!input.trim()) return;
-    const userMsg = { from: "user", text: input };
-    setMessages((prev) => [...prev, userMsg]);
+
+    const newMessages = [...messages, { sender: "شما", text: input }];
+    setMessages(newMessages);
     setInput("");
     setLoading(true);
 
-    const res = await fetch("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: input }),
-    });
+    try {
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: input }),
+      });
+      const data = await res.json();
 
+      setMessages([...newMessages, { sender: "چت‌بات", text: data.reply }]);
+    } catch (err) {
+      setMessages([...newMessages, { sender: "چت‌بات", text: "خطایی رخ داد." }]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    const data = await res.json();
-
-    const botMsg = { from: "bot", text: data.reply };
-    setMessages((prev) => [...prev, botMsg]);
-    setLoading(false);
+  const handleKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") sendMessage();
   };
 
   return (
     <div style={styles.container}>
-      <h1 style={styles.title}>🤖 Free AI Chat</h1>
-
-      <div style={styles.chatBox}>
-        {messages.map((msg, i) => (
+      <h1 style={styles.header}>چت با هوش مصنوعی</h1>
+      <div style={styles.chatBox} ref={chatBoxRef}>
+        {messages.map((msg, index) => (
           <div
-            key={i}
+            key={index}
             style={{
               ...styles.message,
-              alignSelf: msg.from === "user" ? "flex-end" : "flex-start",
-              backgroundColor: msg.from === "user" ? "#0070f3" : "#e5e5e5",
-              color: msg.from === "user" ? "white" : "black",
+              alignSelf: msg.sender === "شما" ? "flex-end" : "flex-start",
+              backgroundColor: msg.sender === "شما" ? "#000" : "#fff",
+              color: msg.sender === "شما" ? "#fff" : "#000",
             }}
           >
-            {msg.text}
+            <strong>{msg.sender}: </strong>
+            <span>{msg.text}</span>
           </div>
         ))}
-        {loading && <div style={styles.loading}>Thinking...</div>}
+        {loading && <div style={styles.loading}>در حال ارسال...</div>}
       </div>
-
       <div style={styles.inputContainer}>
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-          placeholder="Type something..."
+          onKeyDown={handleKey}
+          placeholder="پیام خود را تایپ کنید..."
           style={styles.input}
         />
         <button onClick={sendMessage} style={styles.button}>
-          Send
+          ارسال
         </button>
       </div>
     </div>
   );
 }
 
-const styles = {
+const styles: Record<string, React.CSSProperties> = {
   container: {
-    display: "flex",
-    flexDirection: "column" as const,
-    alignItems: "center",
-    justifyContent: "center",
-    height: "100vh",
-    backgroundColor: "#fafafa",
+    maxWidth: "600px",
+    margin: "50px auto",
     padding: "20px",
+    border: "1px solid #ccc",
+    borderRadius: "8px",
+    direction: "rtl", // Right-to-left for Persian
+    fontFamily: "Tahoma, sans-serif",
   },
-  title: {
-    fontSize: "1.5rem",
-    fontWeight: "bold",
+  header: {
+    textAlign: "center",
     marginBottom: "20px",
   },
   chatBox: {
-    width: "100%",
-    maxWidth: "500px",
-    height: "400px",
-    border: "1px solid #ccc",
-    borderRadius: "10px",
-    padding: "10px",
     display: "flex",
-    flexDirection: "column" as const,
-    overflowY: "auto" as const,
-    backgroundColor: "white",
-    marginBottom: "10px",
+    flexDirection: "column",
+    gap: "10px",
+    minHeight: "300px",
+    maxHeight: "350px",
+    overflowY: "auto",
+    padding: "10px",
+    border: "1px solid #ccc",
+    borderRadius: "6px",
+    backgroundColor: "#f9f9f9",
   },
   message: {
-    padding: "10px",
-    borderRadius: "10px",
-    marginBottom: "8px",
+    padding: "8px 12px",
+    borderRadius: "15px",
     maxWidth: "80%",
+    wordWrap: "break-word",
+  },
+  loading: {
+    fontStyle: "italic",
+    color: "#555",
+    alignSelf: "center",
   },
   inputContainer: {
     display: "flex",
-    width: "100%",
-    maxWidth: "500px",
+    marginTop: "15px",
+    gap: "10px",
   },
   input: {
     flex: 1,
     padding: "10px",
-    borderRadius: "5px",
+    borderRadius: "6px",
     border: "1px solid #ccc",
-    color:"black",
+    fontSize: "16px",
   },
   button: {
-    marginLeft: "10px",
     padding: "10px 20px",
+    borderRadius: "6px",
     border: "none",
-    borderRadius: "5px",
-    backgroundColor: "#0070f3",
-    color: "white",
+    backgroundColor: "#000",
+    color: "#fff",
+    fontWeight: "bold",
     cursor: "pointer",
-  },
-  loading: {
-    fontStyle: "italic",
-    color: "#666",
   },
 };
