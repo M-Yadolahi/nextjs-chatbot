@@ -16,8 +16,10 @@ export default function Home() {
     const res = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: userMsg.text }),
+      body: JSON.stringify({ message: input }),
     });
+
+
     const data = await res.json();
 
     const botMsg = { from: "bot", text: data.reply };
